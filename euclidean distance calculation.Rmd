@@ -1,0 +1,150 @@
+---
+title: "Euclidian distance calculations"
+author: "Ben Deck"
+date: "10/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(bio3d)
+library(dplyr)
+library(tidyr)
+coords <- read.csv("/Users/Ben/Dropbox/Drexel/CogNew/Attention network project/NET ANT DATA/target coordinates.csv")
+
+coords
+
+
+```
+
+```{r}
+CO_mat <- matrix(c(coords$MFG_CO.target.x, coords$MFG_CO.target.y, coords$mfg.co.target.z), ncol = 3)
+
+CO_mat
+
+```
+
+```{r}
+FPCN_mat <- matrix(c(coords$fpcn.x, coords$fpcn.y, coords$fpcn.z), ncol = 3)
+
+FPCN_mat
+
+
+```
+
+```{r}
+LDAN_mat <- matrix(c(coords$ldan.x, coords$ldan.y, coords$ldan.z), ncol = 3)
+
+LDAN_mat
+  
+```
+
+
+```{r}
+
+CO_FPCN.eucdist <- dist.xyz(CO_mat, FPCN_mat, all.pairs = FALSE)
+
+CO_FPCN.eucdist
+
+CO_LDAN.eucdist <- dist.xyz(CO_mat, LDAN_mat, all.pairs = FALSE)
+
+CO_LDAN.eucdist
+
+FPCN_LDAN.eucdist <- dist.xyz(FPCN_mat, LDAN_mat, all.pairs = FALSE)
+
+FPCN_LDAN.eucdist
+```
+
+
+Extracting all effciency measures from Netant processing pipeline
+```{r}
+
+#extracting the alerting effieciency  
+dfalert <-  df %>%
+  dplyr::group_by(sesh) %>%
+  mutate(rn = row_number()) %>%
+  select(id, sesh, CognewAlert)
+dfalert_pre <- subset(dfalert, sesh =='pre')
+dfalert_post <- subset(dfalert, sesh =='post')
+dfalert_change <- dfalert_post$CognewAlert - dfalert_pre$CognewAlert
+
+#extracting the executive control effieciency
+dfexec <-  df %>%
+  dplyr::group_by(sesh) %>%
+  mutate(rn = row_number()) %>%
+  select(id, sesh, CognewExecutive)
+dfexec_pre <- subset(dfexec, sesh =='pre')
+dfexec_post <- subset(dfexec, sesh =='post')
+dfexec_change <- dfexec_post$CognewExecutive - dfexec_pre$CognewExecutive
+
+#extracting the orienting effieciency
+dforient <-  df %>%
+  dplyr::group_by(sesh) %>%
+  mutate(rn = row_number()) %>%
+  select(id, sesh, CognewOrient)
+dforient_pre <- subset(dforient, sesh =='pre')
+dforient_post <- subset(dforient, sesh =='post')
+dforient_change <- dforient_post$CognewOrient - dforient_pre$CognewOrient
+
+
+```
+
+CO and FPCN targets  
+```{r}
+library(ggplot2)
+hist(CO_FPCN.eucdist)
+
+ggplot2::ggplot(data = NULL, aes(x = CO_FPCN.eucdist, y =dfalert_change)) + geom_point() + labs(title = 'CO-FPCN euclidean distance by alerting change score' , x = 'CO-FPCN euclidean distance (mm)', y = 'Alerting efficiency change score')
+
+
+ggplot2::ggplot(data = NULL, aes(x = CO_FPCN.eucdist, y = dfexec_change, )) + geom_point() + labs(title = 'CO-FPCN euclidean distance by executive change score', x = 'CO-FPCN euclidean distance (mm)', y = 'Executive control efficiency change score')
+
+
+cor.test(x = CO_FPCN.eucdist, dfalert_change, alternative = 'two.sided', method = 'pearson')
+cor.test(x = CO_FPCN.eucdist, dfexec_change, alternative = 'two.sided', method = 'pearson')
+
+
+
+
+```
+CO and LDAN targets
+```{r}
+
+hist(CO_LDAN.eucdist)
+
+ggplot2::ggplot(data = NULL, aes(x = CO_LDAN.eucdist, y =dfalert_change)) + geom_point() + labs(title = 'CO-FPCN euclidean distance by alerting change score' , x = 'CO-FPCN euclidean distance (mm)', y = 'Alerting efficiency change score')
+
+
+ggplot2::ggplot(data = NULL, aes(x = CO_LDAN.eucdist, y = dforient_change, )) + geom_point() + labs(title = 'CO-LDAN euclidean distance by executive change score', x = 'CO-LDAN euclidean distance (mm)', y = 'Executive control efficiency change score')
+
+
+cor.test(x = CO_LDAN.eucdist, dfalert_change, alternative = 'two.sided', method = 'pearson')
+cor.test(x = CO_LDAN.eucdist, dforient_change, alternative = 'two.sided', method = 'pearson')
+
+
+
+
+```
+FPCN-LDAN
+```{r}
+hist(FPCN_LDAN.eucdist)
+
+ggplot2::ggplot(data = NULL, aes(x = FPCN_LDAN.eucdist, y =dfalert_change)) + geom_point() + labs(title = 'FPCN-LDAN euclidean distance by alerting change score' , x = 'FPCN-LDAN euclidean distance (mm)', y = 'Alerting efficiency change score')
+
+
+ggplot2::ggplot(data = NULL, aes(x = FPCN_LDAN.eucdist, y = dforient_change, )) + geom_point() + labs(title = 'FPCN-LDAN euclidean distance by executive change score', x = 'FPCN-LDAN euclidean distance (mm)', y = 'Executive control efficiency change score')
+
+
+cor.test(x = FPCN_LDAN.eucdist, dfexec_change, alternative = 'two.sided', method = 'pearson')
+cor.test(x = FPCN_LDAN.eucdist, dforient_change, alternative = 'two.sided', method = 'pearson')
+
+```
+
+
+
+
+
+

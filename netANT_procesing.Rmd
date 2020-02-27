@@ -1,0 +1,433 @@
+---
+title: "netANT pipeline project"
+author: "Jared P. Zimmerman + Benjamin L. Deck"
+date: "5/1/2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    number_sections: false
+    code_folding: 'hide'
+    theme: 'cosmo'
+---
+
+```{r setup, include= FALSE, results= "hide", message= FALSE, error= FALSE}
+
+# load packages with the pacman package
+if(!require('pacman')) {
+  install.packages('pacman')
+}
+pacman::p_load(dplyr, ggplot2, wesanderson, tidyr, reshape2, tools)
+```
+
+
+```{r, results= 'hide', echo=F, include= FALSE, message= FALSE, error= FALSE}
+dataDir <- '/Users/Ben/Google Drive/CogNeW Laboratory Files/Projects/Net-ANT/Net-ANT Task/Data/FPCN_cTBS/'
+datFiles <- list.files(path = dataDir, pattern = '*\\.txt',
+                       recursive = T, full.names = T)
+datFiles
+```
+
+```{r, results= 'hide', echo=F}
+source('/Users/Ben/Google Drive/CogNeW Laboratory Files/Projects/Net-ANT/Net-ANT Task/Data/scripts/processSingleSubANTdataforce.R')
+
+dat.list <- lapply(datFiles, function(d) {
+  sesh <- regmatches(d, regexpr(d, pattern = '(pre|post)'))
+  id <- regmatches(d, regexpr(d, pattern = '[0-9]{3}'))
+  data <- processSingleSubANT(d)
+  output <- bind_cols(tibble(id = id), tibble(sesh = sesh), data)
+  return(output)
+})
+df <- bind_rows(dat.list)
+df
+```
+
+
+```{R, results = 'hide', echo = F}
+df$sesh <- factor(df$sesh, levels = c('pre','post'))
+
+
+```
+
+
+# ANT efficiency calculations
+```{r}
+ df <- df %>%
+  dplyr::mutate(Fan2002Alert = (no_medRT - center_medRT)) %>%
+  dplyr::mutate(Fan2002Orient = (center_medRT - spatial_medRT)) %>%
+  dplyr::mutate(Fan2002Executive = incongruent_medRT - congruent_medRT) %>%
+  dplyr::mutate(Fan2003Alert = (Fan2002Alert / medRT)) %>%
+  dplyr::mutate(Fan2003Orient = (Fan2002Orient / medRT)) %>%
+  dplyr::mutate(Fan2003Executive = Fan2002Executive / medRT) %>%
+  dplyr::mutate(CognewAlert = (Fan2002Alert/ no_medRT)) %>%
+  dplyr::mutate(CognewOrient = (Fan2002Orient / center_medRT)) %>%
+  dplyr::mutate(CognewExecutive = (Fan2002Executive / congruent_medRT)) %>%
+  dplyr::mutate(ChinaAlert = (Fan2002Alert / center_medRT)) %>%
+  dplyr::mutate(ChinaOrient = (Fan2002Orient / spatial_medRT)) %>%
+  dplyr::mutate(ChinaExecutive = (Fan2002Executive / congruent_medRT))
+  
+```
+
+
+```{r, results='hide', echo=FALSE}
+lapply(datFiles, function(d) {
+  id <- regmatches(d, regexpr(d, pattern = '[0-9]{3}'))
+  id
+})
+```
+
+
+```{r, results='hide', echo=F}
+datFiles
+```
+
+```{R, results = 'hide', echo = F}
+
+df2 <- melt(df, sesh = 'sesh')
+df3 <- df2 %>%
+  dplyr::arrange(sesh) %>%
+  dplyr::filter(variable == 'congruent_medRT' | variable == "incongruent_medRT" | 
+                  variable == 'center_medRT'
+                | variable == 'spatial_medRT' | variable == 'no_medRT')
+
+df3 
+
+
+
+```
+
+
+# Plot of median RT distributions
+```{R}
+
+MedianRTDistribution_plot <-  ggplot(df3, aes(x = variable, y = value, fill =sesh)) +
+  geom_boxplot(varwidth = T) + 
+      labs(title= " L-DAN target Median Distribution of each trial type",
+           x = 'Trial type',
+           y = 'Median RT') +
+  scale_x_discrete(labels(c('Congruent', 'Incongruent', 'Center Cue', 'No Cue', 'Spatial Cue'))) +
+             theme(axis.text.x = element_text(angle=45, vjust = .9))
+MedianRTDistribution_plot
+
+
+
+```
+
+
+
+# Alerting
+
+## Fan 2002 alerting plot median(no cue - center cue)
+```{R}
+
+require(ggplot2)
+
+
+
+Fan2002Alert_plot <- ggplot(df, aes(x = sesh, y = Fan2002Alert))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Fan 2002 Alerting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+Fan2002Alert_plot
+```
+
+## Fan 2003 alert median ((no cue - center cue)/median RT of all trials)
+```{R}
+Fan2003Alert_plot <- ggplot(df, aes(x = sesh, y = Fan2003Alert))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Fan 2003 Alerting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+Fan2003Alert_plot
+```
+
+
+## Cognew Alert median ((no cue - center cue) / no cue) 
+``` {R}
+CognewAlert_plot <- ggplot(df, aes(x = sesh, y = CognewAlert))  +
+  geom_boxplot( fill= c('royalblue',"white"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Cognew Alerting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+CognewAlert_plot
+
+```
+
+
+## China alert median ((no cue - center cue )/ center cue)
+```{R}
+ChinaAlert_plot <-  ggplot(df, aes(x = sesh, y = ChinaAlert))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " China-Group Alerting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+ChinaAlert_plot
+
+```
+
+## Alerting matrix plots
+
+```{R}
+df %>% dplyr::select(id, sesh, contains("alert")) %>%
+ melt(., id.vars = c('id', 'sesh')) %>%
+ ggplot(aes(x = 1, y = value, fill = sesh)) +
+ geom_boxplot() +
+ facet_wrap(~variable, scale = 'free_y')
+
+
+```
+
+## Alerting Dot plot-- Showing change in alerting pre tms to post tms per person--- uses cognew alerting
+
+```{R, echo =F}
+df %>%
+ ggplot(aes(x = sesh, y = CognewAlert, color = id, group = id)) +
+ geom_point() +
+ geom_line() #+ facet_wrap(~Retrieval)
+
+```
+
+
+# Orienting
+
+## Fan 2002 Orienting median(center cue - spatial cue)
+``` {R}
+Fan2002Orient_plot <- ggplot(df, aes(x = sesh, y = Fan2002Orient))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Fan 2002 Orienting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+Fan2002Orient_plot
+
+```
+
+## Fan 2003 orient median ((center cue - spatial cue) /median RT of all trials) 
+```{R}
+
+Fan2003Orient_plot <- ggplot(df, aes(x = sesh, y = Fan2003Orient))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Fan 2003 Orienting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+Fan2003Orient_plot
+
+```
+
+
+## Cognew Orient median ((center cue - spatial cue)/ center cue)
+```{R}
+CognewOrienting_plot <- ggplot(df, aes(x = sesh, y = CognewOrient))  +
+  geom_boxplot( fill= c('royalblue',"white"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Cognew Orienting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+CognewOrienting_plot
+```
+
+
+## China Orienting median ((center cue - spatial cue) / spatial cue)
+```{R}
+
+ChinaOrient_plot <-  ggplot(df, aes(x = sesh, y = ChinaOrient))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " China-group Orienting ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+ChinaOrient_plot
+```
+
+
+## Orienting matrix plots
+
+```{R}
+df %>% dplyr::select(id, sesh, contains("Orient")) %>%
+ melt(., id.vars = c('id', 'sesh')) %>%
+ ggplot(aes(x = 1, y = value, fill = sesh)) +
+ geom_boxplot() +
+ facet_wrap(~variable, scale = 'free_y')
+
+
+```
+
+
+## Median orienting dot plot --- showing change in orienting per person from pre tms to post tms--Uses cognew orienting
+
+``` {R }
+df %>%
+ ggplot(aes(x = sesh, y = CognewOrient, color = id, group = id)) +
+ geom_point() +
+ geom_line() #+ facet_wrap(~Retrieval)
+
+```
+
+
+# Executive
+
+
+## Fan 2002 executive median(Incongruent - congruent)
+``` {R}
+Fan2002Executive_plot <- ggplot(df, aes(x = sesh, y = Fan2002Executive))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Fan 2002 Executive ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+Fan2002Executive_plot
+```
+
+
+## Fan 2003 executive median ((incongruent - congruent) / median RT of all trials))
+```{R}
+Fan2003Executive_plot <- ggplot(df, aes(x = sesh, y = Fan2003Executive))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Fan 2003 Executive ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+Fan2003Executive_plot
+```
+
+
+## Cognew Executive median ((incongruent - congruent) / congruent )
+``` {R}
+CognewExecutive_plot <- ggplot(df, aes(x = sesh, y = CognewExecutive))  +
+  geom_boxplot( fill= c('royalblue',"white"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " Cognew Executive Efficiency", x = 'Session') +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+CognewExecutive_plot
+```
+
+
+## China Executive median ((incongurent - congruent ) / congruent)
+``` {R}
+
+ChinaExecutive_plot <-  ggplot(df, aes(x = sesh, y = ChinaExecutive))  +
+  geom_boxplot( fill= c('orange',"tomato"), show.legend = T, notch = F, na.rm = T) + 
+      labs(title= " China-Group Executive ") +
+    scale_x_discrete(labels = c("Pre", "Post")) +
+  #scale_y_continuous(breaks=seq(-.05, .2, .03), limits = c(-.05, .2)) +
+             theme(axis.text.x = element_text(angle=65, vjust=0.3))
+ChinaExecutive_plot
+
+
+```
+
+
+
+
+
+
+
+``` {R, results= 'hide', echo = F}
+df %>%
+  dplyr::group_by(sesh) %>%
+    dplyr::summarise(medRT = median(CognewExecutive),
+                     nTrials = n()) %>%
+    tidyr::gather(variable, value, medRT:nTrials) %>%
+    unite(temp, sesh, variable) %>%
+    tidyr::spread(temp, value)
+
+
+
+
+
+```
+
+
+## Executive matrix plots
+```{R}
+
+df %>% dplyr::select(id, sesh, contains("exec")) %>%
+ melt(., id.vars = c('id', 'sesh')) %>%
+ ggplot(aes(x = 1, y = value, fill = sesh)) +
+ geom_boxplot() +
+ facet_wrap(~variable, scale = 'free_y')
+
+
+```
+
+
+## Median executive pre tms – showing change in executive pre tms to post tms per person --- uses cognew executive
+
+```{R}
+df %>%
+ ggplot(aes(x = sesh, y = CognewExecutive, color = id, group = id)) +
+ geom_point() + labs(x = 'Session', title = 'Cognew Executive Efficiency Change') +
+ geom_line() #+ facet_wrap(~Retrieval)
+
+
+```
+
+
+## Median change in no cue trial from pre tms to post tms per person
+
+```{R}
+df %>%
+ ggplot(aes(x = sesh, y = no_medRT, color = id, group = id)) +
+ geom_point() +
+ geom_line() #+ facet_wrap(~Retrieval)
+
+```
+
+
+
+# T-tests of pre and post efficiency measures
+
+```{R}
+execT <- df  %>%
+  dplyr::group_by(sesh) %>%
+  tidyr::spread(sesh, CognewExecutive) %>%
+  dplyr::select(pre, post)
+
+t.test(na.omit(execT$pre), na.omit(execT$post), paired = T, alternative = 'two.sided')
+
+```
+
+
+
+```{r}
+
+df.cors.pre <- df %>%
+  dplyr::group_by(sesh) %>%
+  dplyr::filter(sesh == 'pre')
+
+cor.test(df.cors.pre$CognewAlert, df.cors.pre$CognewOrient, alternative = 'two.sided', method = 'pearson')
+cor.test(df.cors.pre$CognewAlert, df.cors.pre$CognewExecutive, alternative = 'two.sided', method = 'pearson')
+cor.test(df.cors.pre$CognewOrient, df.cors.pre$CognewExecutive, alternative = 'two.sided', method = 'pearson')
+
+
+
+```
+
+```{r}
+df.cors.post <- df %>%
+  dplyr::group_by(sesh) %>%
+  dplyr::filter(sesh == 'post')
+
+cor.test(df.cors.post$CognewAlert, df.cors.post$CognewOrient, alternative = 'two.sided', method = 'pearson')
+cor.test(df.cors.post$CognewAlert, df.cors.post$CognewExecutive, alternative = 'two.sided', method = 'pearson')
+cor.test(df.cors.post$CognewOrient, df.cors.post$CognewExecutive, alternative = 'two.sided', method = 'pearson')
+
+
+```
+
+```{r}
+lawstat::levene.test(df$CognewExecutive, df$sesh)
+
+effsize::cohen.d(df$CognewExecutive, df$sesh, pooled=TRUE)
+
+
+
+```
